@@ -1,3 +1,4 @@
+![example_violins](https://user-images.githubusercontent.com/24999721/131259449-0f12ee83-ab0f-4538-a415-c8737e2d8b33.jpg)
 # R_for_mixedmeasures_anal_and_graphs
 R_for_mixedmeasures_anal_and_graphs
 
