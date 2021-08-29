@@ -1,4 +1,4 @@
-# R-jupyter
+# R_for_mixedmeasures_anal_and_graphs
 R_for_mixedmeasures_anal_and_graphs
 
 This code is designed to test mixed data with both within- and between subjects factors.
