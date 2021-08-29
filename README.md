@@ -11,7 +11,7 @@ Packages required:
 * plotly
 * orca (for saving plotly graphics to svg)
 
-The code is provided in two formats: R script and Jupyter notebook. In addition to the full statistical analysis, the code generates a violin plot to represent data distributions and a pre- post- dot plot to inspect within-individual differences between measurements.
+The code is provided in two formats: R script and Jupyter notebook. In addition to the full statistical analysis, the code generates a violin plot to represent data distributions and a pre- post- dot plot to inspect within-individual differences between measurements. These plots can be saved as vector art for figure construction.
 ![example_violins](https://user-images.githubusercontent.com/24999721/131259449-0f12ee83-ab0f-4538-a415-c8737e2d8b33.jpg)
 ![example_prepost](https://user-images.githubusercontent.com/24999721/131259472-010b4e8e-f8c1-4932-a490-12752a2d160d.jpg)
 
