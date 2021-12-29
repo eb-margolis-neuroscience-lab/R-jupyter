@@ -1,0 +1,202 @@
+---
+title: "Mixed ANOVA Worksheet, 2 Observations, 2 Groups"
+output:
+  html_notebook: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+```{r, results='hide'}
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+```
+### Instructions:  
+Run once to **Preview** and check, then run
+```{r eval=FALSE}
+savemyNBoutput(notebookpath, datapath)   
+```
+in console to run the notebook and save output to html file that is named for the dataset in the same directory as the data file.   
+
+### Load Data:     
+File format should have the following columns:  
+
+1. id (animal#)  
+2. condition (e.g. sham or SNI)  
+3. phase (e.g. baseline or test)  
+4. measure (e.g difference score)  
+  
+  Data loaded from:
+  
+
+```{r, echo=FALSE}
+notebookpath <- rstudioapi::getActiveDocumentContext()$path
+datapath <- rstudioapi::selectFile(caption = "Select CSV File",
+                               filter = "CSV Files (*.csv)",
+                               existing = TRUE)
+cpp_data <- read.csv(datapath)
+print(datapath)
+```
+
+```{r, echo=FALSE}
+datalength <- as.integer(lengths(cpp_data[1]))
+DT::datatable(cpp_data, width = 450, rownames = FALSE, options = list(pageLength = datalength, dom = 't'))
+```
+
+**Summary Stats:**  
+```{r, echo=FALSE}
+names(cpp_data) <- c("animal", "condition", "phase", "measure")
+cpp_data %>%
+  group_by(phase, condition) %>%
+  get_summary_stats(measure, type = "mean_sd")
+```
+**Display Data:**  
+```{r, echo=FALSE}
+theme_set(theme_classic())
+data_min <- min(cpp_data["measure"])
+data_max <- max(cpp_data["measure"])
+
+prepost <- cpp_data %>% 
+  ggplot(aes(x = phase, y = measure, group = animal, color = condition)) +
+  geom_line() +
+  scale_y_continuous(limits = range(pretty(c(data_min, data_max))), breaks = scales::pretty_breaks(n = 5)) +
+  facet_grid(cols = vars(condition)) +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+
+violins <- cpp_data %>%
+  ggplot(aes(x = condition, y = measure)) +
+  scale_y_continuous(limits = range(pretty(c(data_min, data_max))), breaks = scales::pretty_breaks(n = 5)) +
+  geom_violin(aes(color = phase), trim = FALSE,
+              position = position_dodge(0.9))+
+  geom_jitter(aes(color = phase), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9)) 
+ggarrange(prepost, violins)
+```
+
+```{r, echo=FALSE}
+savefigname <- paste(datapath,".pdf", sep = "")
+pdf(savefigname)
+ggarrange(prepost, violins)
+dev.off() 
+```
+PDF of above figure is saved as  
+```{r, echo = FALSE}
+print(savefigname)
+```
+
+**Outliers: **  
+```{r, echo = FALSE}
+cpp_data %>%
+  group_by(phase, condition) %>%
+  identify_outliers(measure)
+```
+**Normality assumption testing:**  
+Shapiro-Wilk test  
+The null hypothesis that the data are normally distributed is rejected when p < 0.05
+
+```{r, echo=FALSE}
+cpp_data %>%
+  group_by(phase, condition) %>%
+  shapiro_test(measure)
+```
+**Graphical evaluation of normality**  
+If sample size is greater than 50, the normal QQ plot is preferred because at larger sample sizes the Shapiro-Wilk test becomes very sensitive even to a minor deviation from normality.
+```{r, echo=FALSE}
+ggqqplot(cpp_data, "measure", ggtheme = theme_bw()) + facet_grid(phase ~ condition)
+```
+**Test the homogeneity of variance assumption of the between-subject factor:**  
+(condition, phase in the CPP data, ie, sham vs SNI)   
+Levene’s test, performed for each condition. If p < 0.05, reject the null hypothesis that the variances of the underlying populations are most likely equal
+```{r, echo=FALSE}
+cpp_data %>%
+  group_by(condition) %>%
+  levene_test(measure ~ phase)
+```
+
+The homogeneity of covariances of the between-subject factor (group) can be 
+evaluated using the **Box’s M-test**. If this 
+test is statistically significant (i.e., p < 0.001), you should reject the assumption of equal 
+covariances.  
+*Note that the Box’s M is highly sensitive, so unless p < 0.001 and your sample sizes are unequal, ignore it. However, if significant and you have unequal sample sizes, the test is not robust*  
+```{r, echo=FALSE}
+box_m(cpp_data[, "measure", drop = FALSE], cpp_data$phase)
+```
+If you do not have homogeneity of covariances, you could consider separating your analyses into distinct repeated measures ANOVAs for each group. Alternatively, you could omit the interpretation of the interaction term. Unfortunately, it is difficult to remedy a failure of this assumption. Often a mixed ANOVA is run anyway and the violation noted.  
+
+**Two-way mixed ANOVA test**
+
+```{r, echo=FALSE}
+res.aov <- anova_test(
+  data = cpp_data, dv = measure, wid = animal,
+  between = condition, within = phase
+)
+get_anova_table(res.aov)
+
+```
+
+
+**Pairwise comparisons**
+```{r, echo=FALSE}
+pwc <- cpp_data %>%
+  group_by(condition) %>%
+  pairwise_t_test(measure ~ phase, p.adjust.method = "bonferroni")
+pwc
+```
+Effect of phase in each condition (ie, baseline vs test in Sham or SNI)  
+```{r, echo=FALSE}
+one.way2 <- cpp_data %>%
+  group_by(condition) %>%
+  anova_test(dv = measure, wid = animal, within = phase) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way2
+```
+**Two way interaction test**  
+Effect of group at each time point (i.e., baseline, test)  
+Bonferroni method
+
+```{r, echo=FALSE}
+one.way <- cpp_data %>%
+  group_by(phase) %>%
+  anova_test(dv = measure, wid = animal, between = condition) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way
+```
+**For non-signficant two-way interactions**  
+Post-hoc tests
+**Pairwise comparisons** between time points at each group levels  
+Paired t-test is used because we have repeated measures by time (condition)
+```{r, echo=FALSE}
+pwc2 <- cpp_data %>%
+  group_by(condition) %>%
+  pairwise_t_test(
+    measure ~ phase, paired = TRUE, 
+    p.adjust.method = "bonferroni"
+  ) %>%
+  select(-df, -statistic, -p) # Remove details
+pwc2
+```
+**Compare by groups**
+```{r, echo=FALSE}
+cpp_data %>%
+  pairwise_t_test(
+    measure ~ condition,
+    p.adjust.method = "bonferroni"
+  )
+
+```
+```{r, echo=FALSE}
+# Optional function called in the Console to re-run the notebook and knit it to an html file that is named for the dataset, saved in the same directory as the data file. 
+savemyNBoutput <- function(notebookpath, datapath) {
+  notebookpathnoend <- substr(notebookpath,1,nchar(notebookpath)-4)
+  currenthtmlname <- paste(notebookpathnoend, ".nb.html", sep = "")
+  savehtmlname <- paste(datapath,".html", sep = "") 
+  rmarkdown::render(notebookpath, output_file = savehtmlname)
+  return(savehtmlname)
+}
+```
+ <a href="#top">Back to top</a>
