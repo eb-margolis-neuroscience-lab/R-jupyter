@@ -1,7 +1,10 @@
 # R_for_mixedmeasures_anal_and_graphs
-R_for_mixedmeasures_anal_and_graphs
+Mixed ANOVA Worksheet, 2 Observations, 2 Groups
 
 This code is designed to test mixed data with both within- and between subjects factors.
+
+*Updated 12/28/2021:* Added an R Notebook version that outputs an HTML record of the output.  This version requires tidyverse, ggpubr, statix. 
+
 Packages required:
 * tidyverse
 * dplyr
